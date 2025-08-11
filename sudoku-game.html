@@ -25,14 +25,15 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 0;
+            margin: 0;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
         
         .container {
             background: #f8f6f0;
-            padding: 30px;
+            padding: 20px;
             border-radius: 10px;
             box-shadow: 
                 0 20px 60px rgba(0,0,0,0.3),
@@ -40,6 +41,9 @@
             position: relative;
             max-width: 600px;
             width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             background-image: 
                 repeating-linear-gradient(
                     transparent,
@@ -64,7 +68,7 @@
             text-align: center;
             color: #2c3e50;
             margin-bottom: 20px;
-            font-size: 2.5em;
+            font-size: clamp(1.8rem, 6vw, 2.5rem);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
             font-weight: 700;
         }
@@ -141,8 +145,8 @@
             display: grid;
             grid-template-columns: repeat(9, 1fr);
             gap: 0;
-            width: 450px;
-            height: 450px;
+            width: min(450px, calc(100vw - 60px));
+            height: min(450px, calc(100vw - 60px));
             margin: 20px auto;
             background: white;
             border: 3px solid #2c3e50;
@@ -151,13 +155,13 @@
         }
         
         .cell {
-            width: 50px;
-            height: 50px;
+            width: 100%;
+            height: 100%;
             border: 1px solid #bdc3c7;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5em;
+            font-size: clamp(1rem, 4vw, 1.5rem);
             cursor: pointer;
             transition: all 0.2s ease;
             background: white;
@@ -289,6 +293,7 @@
             text-align: center;
             color: #7f8c8d;
             margin-top: 10px;
+            display: none;
         }
         
         .hidden {
@@ -332,21 +337,53 @@
         }
         
         @media (max-width: 600px) {
-            .sudoku-grid {
-                width: 360px;
-                height: 360px;
+            .container {
+                padding: 10px;
+                border-radius: 0;
             }
             
-            .cell {
-                width: 40px;
-                height: 40px;
-                font-size: 1.2em;
+            .container::before {
+                left: 20px;
+            }
+            
+            .btn {
+                padding: 12px 20px;
+                font-size: 1rem;
             }
             
             .number-btn {
-                width: 35px;
-                height: 35px;
-                font-size: 1.1em;
+                width: 38px;
+                height: 38px;
+                font-size: 1.1rem;
+            }
+            
+            .btn-small {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .controls {
+                gap: 8px;
+            }
+            
+            .action-buttons {
+                gap: 10px;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            body {
+                padding: 0;
+            }
+            
+            .number-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+            
+            .timer {
+                font-size: 1.2rem;
             }
         }
     </style>
@@ -361,13 +398,13 @@
             </p>
             <div class="difficulty-buttons">
                 <button class="btn btn-easy" onclick="startGame('easy')">
-                    🌱 Легкий (45 подсказок)
+                    🌱 Легкий
                 </button>
                 <button class="btn btn-medium" onclick="startGame('medium')">
-                    🌿 Средний (35 подсказок)
+                    🌿 Средний
                 </button>
                 <button class="btn btn-hard" onclick="startGame('hard')">
-                    🌳 Сложный (25 подсказок)
+                    🌳 Сложный
                 </button>
             </div>
         </div>
@@ -376,7 +413,7 @@
             <div class="timer" id="timer">00:00</div>
             <div class="sudoku-grid" id="sudokuGrid"></div>
             <div class="controls" id="numberControls"></div>
-            <div class="hints-counter" id="hintsCounter">Подсказок осталось: 3</div>
+            <div class="hints-counter" id="hintsCounter" style="display: none;"></div>
             <div class="action-buttons">
                 <button class="btn btn-small btn-hint" onclick="getHint()">
                     💡 Подсказка
@@ -395,7 +432,6 @@
         let currentGrid = [];
         let solutionGrid = [];
         let selectedCell = null;
-        let hintsLeft = 3;
         let timerInterval;
         let seconds = 0;
         let difficulty = 'easy';
@@ -565,11 +601,6 @@
         }
         
         function getHint() {
-            if (hintsLeft <= 0) {
-                alert('Подсказки закончились!');
-                return;
-            }
-            
             const emptyCells = [];
             for (let i = 0; i < 9; i++) {
                 for (let j = 0; j < 9; j++) {
@@ -579,7 +610,10 @@
                 }
             }
             
-            if (emptyCells.length === 0) return;
+            if (emptyCells.length === 0) {
+                alert('Все клетки уже заполнены!');
+                return;
+            }
             
             const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
             currentGrid[row][col] = solutionGrid[row][col];
@@ -588,9 +622,6 @@
             const cellIndex = row * 9 + col;
             cells[cellIndex].textContent = solutionGrid[row][col];
             cells[cellIndex].classList.add('fixed', 'hint');
-            
-            hintsLeft--;
-            document.getElementById('hintsCounter').textContent = `Подсказок осталось: ${hintsLeft}`;
             
             checkWin();
         }
@@ -641,8 +672,6 @@
         
         function startGame(level) {
             difficulty = level;
-            hintsLeft = 3;
-            document.getElementById('hintsCounter').textContent = `Подсказок осталось: ${hintsLeft}`;
             
             generateSudoku();
             createGrid();
