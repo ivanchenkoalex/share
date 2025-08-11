@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- Мета-тег для правильного отображения на мобильных устройствах -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- PWA-теги -->
+    <title>Судоку</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#fdfaf1"/>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Судоку">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/6d8a9b/ffffff?text=S">
+
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #fdfaf1;
+            --grid-line-color: #d3c8b4;
+            --grid-line-thick-color: #8b7e6a;
+            --font-color: #3d352a;
+            --fixed-font-color: #1a1612;
+            --user-font-color: #005a9c;
+            --error-font-color: #d92c2c;
+            --selected-bg-color: #fffde4;
+            --highlight-bg-color: #f0eada;
+            --button-bg-color: #ffffff;
+            --button-border-color: #d3c8b4;
+            --button-hover-bg-color: #f0eada;
+            --accent-color: #6d8a9b;
+        }
+
+        body {
+            font-family: 'Caveat', cursive;
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        /* --- Стартовый экран --- */
+        #start-screen {
+            text-align: center;
+            padding: 30px;
+            background: var(--button-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            width: 100%;
+        }
+
+        #start-screen h1 {
+            font-size: 4rem;
+            margin: 0 0 20px;
+            color: var(--fixed-font-color);
+        }
+
+        #start-screen p {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        .difficulty-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn, #start-btn, #install-btn {
+            font-family: 'Caveat', cursive;
+            font-size: 1.5rem;
+            padding: 10px 20px;
+            border: 2px solid var(--button-border-color);
+            border-radius: 8px;
+            background-color: var(--button-bg-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .difficulty-btn:hover {
+            background-color: var(--highlight-bg-color);
+        }
+        
+        .difficulty-btn.selected {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        #start-btn, #install-btn {
+            font-weight: 700;
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+            width: 80%;
+            max-width: 300px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+        
+        #start-btn:hover, #install-btn:hover {
+            opacity: 0.9;
+        }
+
+        #install-btn {
+            display: none; /* Скрыта по умолчанию */
+        }
+
+        /* --- Игровой экран --- */
+        #game-screen {
+            display: none; /* Изначально скрыт */
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        #sudoku-board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+            border: 3px solid var(--grid-line-thick-color);
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+            border: 1px solid var(--grid-line-color);
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .cell:nth-child(3n) { border-right: 2px solid var(--grid-line-thick-color); }
+        .cell:nth-child(9n) { border-right: none; }
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid var(--grid-line-thick-color);
+        }
+        
+        .cell.selected {
+            background-color: var(--selected-bg-color);
+        }
+        
+        .cell.highlight {
+            background-color: var(--highlight-bg-color);
+        }
+
+        .cell.fixed {
+            color: var(--fixed-font-color);
+            cursor: default;
+        }
+
+        .cell.user-filled {
+            color: var(--user-font-color);
+        }
+        
+        .cell.error {
+            color: var(--error-font-color);
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        #number-controls {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .number-btn {
+            font-family: 'Caveat', cursive;
+            font-size: 2rem;
+            font-weight: 700;
+            aspect-ratio: 1 / 1;
+            border: 2px solid var(--button-border-color);
+            border-radius: 8px;
+            background-color: var(--button-bg-color);
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .number-btn:hover {
+            background-color: var(--highlight-bg-color);
+        }
+
+        #game-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            font-family: 'Caveat', cursive;
+            font-size: 1.5rem;
+            padding: 10px 15px;
+            border: 2px solid var(--button-border-color);
+            border-radius: 8px;
+            background-color: var(--button-bg-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-grow: 1;
+            text-align: center;
+        }
+        
+        .action-btn:hover {
+            background-color: var(--highlight-bg-color);
+        }
+
+        /* --- Модальное окно --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            animation: zoomIn 0.3s;
+        }
+        
+        .modal-content h2 {
+            font-size: 3rem;
+            margin: 0 0 20px;
+            color: var(--accent-color);
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <!-- Стартовый экран -->
+        <div id="start-screen">
+            <h1>Судоку</h1>
+            <p>Выберите уровень сложности:</p>
+            <div class="difficulty-options">
+                <button class="difficulty-btn" data-difficulty="easy">Легкий</button>
+                <button class="difficulty-btn" data-difficulty="medium">Средний</button>
+                <button class="difficulty-btn" data-difficulty="hard">Сложный</button>
+            </div>
+            <button id="start-btn">Начать игру</button>
+            <button id="install-btn">Установить игру</button>
+        </div>
+
+        <!-- Игровой экран -->
+        <div id="game-screen">
+            <div id="sudoku-board"></div>
+            <div id="number-controls"></div>
+            <div id="game-actions">
+                <button id="hint-btn" class="action-btn">Подсказка</button>
+                <button id="restart-btn" class="action-btn">Перезапустить</button>
+                <button id="new-game-btn" class="action-btn">Новая игра</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для сообщения о победе -->
+    <div id="win-modal" class="modal">
+        <div class="modal-content">
+            <h2>Победа!</h2>
+            <button id="play-again-btn" class="action-btn">Играть снова</button>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Элементы DOM ---
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const boardElement = document.getElementById('sudoku-board');
+        const numberControls = document.getElementById('number-controls');
+        const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+        const startBtn = document.getElementById('start-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const newGameBtn = document.getElementById('new-game-btn');
+        const winModal = document.getElementById('win-modal');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const installBtn = document.getElementById('install-btn');
+
+        // --- Состояние игры ---
+        let difficulty = 'medium';
+        let board = [];
+        let solution = [];
+        let initialBoard = [];
+        let selectedCell = null;
+
+        // --- Настройка стартового экрана ---
+        difficultyButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                difficultyButtons.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                difficulty = btn.dataset.difficulty;
+            });
+        });
+        document.querySelector(`.difficulty-btn[data-difficulty="${difficulty}"]`).classList.add('selected');
+
+        startBtn.addEventListener('click', startGame);
+        newGameBtn.addEventListener('click', () => {
+            gameScreen.style.display = 'none';
+            startScreen.style.display = 'block';
+        });
+        playAgainBtn.addEventListener('click', () => {
+            winModal.style.display = 'none';
+            gameScreen.style.display = 'none';
+            startScreen.style.display = 'block';
+        });
+        restartBtn.addEventListener('click', restartGame);
+        hintBtn.addEventListener('click', useHint);
+
+        // --- Генерация Судоку (класс SudokuGenerator остается без изменений) ---
+        class SudokuGenerator {
+            constructor() { this.board = Array(9).fill(0).map(() => Array(9).fill(0)); this.solution = []; }
+            generate(difficulty) { this.board = Array(9).fill(0).map(() => Array(9).fill(0)); this.fillDiagonal(); this.fillRemaining(0, 3); this.solution = JSON.parse(JSON.stringify(this.board)); this.removeDigits(difficulty); return { puzzle: this.board, solution: this.solution }; }
+            fillDiagonal() { for (let i = 0; i < 9; i += 3) { this.fillBox(i, i); } }
+            fillBox(row, col) { let num; for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) { do { num = this.randomGenerator(9); } while (!this.isUnusedInBox(row, col, num)); this.board[row + i][col + j] = num; } } }
+            isUnusedInBox(rowStart, colStart, num) { for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) { if (this.board[rowStart + i][colStart + j] === num) return false; } } return true; }
+            randomGenerator(num) { return Math.floor(Math.random() * num + 1); }
+            isSafe(row, col, num) { return (this.isUnusedInRow(row, num) && this.isUnusedInCol(col, num) && this.isUnusedInBox(row - (row % 3), col - (col % 3), num)); }
+            isUnusedInRow(row, num) { for (let col = 0; col < 9; col++) { if (this.board[row][col] === num) return false; } return true; }
+            isUnusedInCol(col, num) { for (let row = 0; row < 9; row++) { if (this.board[row][col] === num) return false; } return true; }
+            fillRemaining(row, col) { if (col >= 9 && row < 8) { row = row + 1; col = 0; } if (row >= 9 && col >= 9) return true; if (row < 3) { if (col < 3) col = 3; } else if (row < 6) { if (col === Math.floor(row / 3) * 3) col = col + 3; } else { if (col === 6) { row = row + 1; col = 0; if (row >= 9) return true; } } for (let num = 1; num <= 9; num++) { if (this.isSafe(row, col, num)) { this.board[row][col] = num; if (this.fillRemaining(row, col + 1)) return true; this.board[row][col] = 0; } } return false; }
+            removeDigits(difficulty) { let count; switch (difficulty) { case 'easy': count = 40; break; case 'medium': count = 50; break; case 'hard': count = 58; break; default: count = 50; } while (count !== 0) { let cellId = this.randomGenerator(81) - 1; let row = Math.floor(cellId / 9); let col = cellId % 9; if (this.board[row][col] !== 0) { count--; this.board[row][col] = 0; } } }
+        }
+
+        // --- Логика игры (остается почти без изменений) ---
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            hintBtn.textContent = `Подсказка`;
+            const generator = new SudokuGenerator();
+            const puzzleData = generator.generate(difficulty);
+            board = puzzleData.puzzle;
+            solution = puzzleData.solution;
+            initialBoard = JSON.parse(JSON.stringify(board));
+            renderBoard();
+            setupNumberControls();
+        }
+        function restartGame() { board = JSON.parse(JSON.stringify(initialBoard)); renderBoard(); }
+        function useHint() { let emptyCells = []; for (let r = 0; r < 9; r++) { for (let c = 0; c < 9; c++) { if (board[r][c] === 0) emptyCells.push({ r, c }); } } if (emptyCells.length > 0) { const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)]; const { r, c } = randomCell; const correctValue = solution[r][c]; board[r][c] = correctValue; const cellElement = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`); cellElement.textContent = correctValue; cellElement.classList.add('user-filled'); cellElement.classList.remove('error'); checkWinCondition(); } }
+        function renderBoard() { boardElement.innerHTML = ''; for (let r = 0; r < 9; r++) { for (let c = 0; c < 9; c++) { const cell = document.createElement('div'); cell.classList.add('cell'); cell.dataset.row = r; cell.dataset.col = c; if (board[r][c] !== 0) { cell.textContent = board[r][c]; if (initialBoard[r][c] !== 0) { cell.classList.add('fixed'); } else { cell.classList.add('user-filled'); } } if (initialBoard[r][c] === 0) { cell.addEventListener('click', () => selectCell(cell, r, c)); } boardElement.appendChild(cell); } } }
+        function setupNumberControls() { numberControls.innerHTML = ''; for (let i = 1; i <= 9; i++) { const btn = document.createElement('button'); btn.classList.add('number-btn'); btn.textContent = i; btn.addEventListener('click', () => fillNumber(i)); numberControls.appendChild(btn); } const eraseBtn = document.createElement('button'); eraseBtn.classList.add('number-btn'); eraseBtn.innerHTML = '&#9003;'; eraseBtn.addEventListener('click', () => fillNumber(0)); numberControls.appendChild(eraseBtn); }
+        function selectCell(cell, r, c) { if (selectedCell) { selectedCell.element.classList.remove('selected'); } document.querySelectorAll('.cell.highlight').forEach(c => c.classList.remove('highlight')); selectedCell = { element: cell, r, c }; cell.classList.add('selected'); for (let i = 0; i < 9; i++) { document.querySelector(`.cell[data-row='${r}'][data-col='${i}']`).classList.add('highlight'); document.querySelector(`.cell[data-row='${i}'][data-col='${c}']`).classList.add('highlight'); } const startRow = r - r % 3; const startCol = c - c % 3; for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) { document.querySelector(`.cell[data-row='${startRow+i}'][data-col='${startCol+j}']`).classList.add('highlight'); } } cell.classList.add('selected'); }
+        function fillNumber(num) { if (!selectedCell) return; const { element, r, c } = selectedCell; if (initialBoard[r][c] !== 0) return; element.classList.remove('error'); if (num === 0) { element.textContent = ''; board[r][c] = 0; } else { element.textContent = num; board[r][c] = num; element.classList.add('user-filled'); if (num !== solution[r][c]) { element.classList.add('error'); } } if (num !== 0 && !element.classList.contains('error')) { checkWinCondition(); } }
+        function checkWinCondition() { for (let r = 0; r < 9; r++) { for (let c = 0; c < 9; c++) { if (board[r][c] === 0 || board[r][c] !== solution[r][c]) return; } } winModal.style.display = 'flex'; }
+        
+        // --- PWA: Логика установки ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to the install prompt: ${outcome}`);
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+        });
+    });
+
+    // --- PWA: Регистрация Service Worker ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker зарегистрирован успешно:', registration);
+                })
+                .catch(error => {
+                    console.log('Ошибка регистрации Service Worker:', error);
+                });
+        });
+    }
+    </script>
+</body>
+</html>
