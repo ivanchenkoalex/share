@@ -26,8 +26,8 @@
             --fixed-font-color: #1a1612;
             --user-font-color: #005a9c;
             --error-font-color: #d92c2c;
-            --selected-bg-color: #fffde4;
-            --highlight-bg-color: #f0eada;
+            --selected-bg-color: #ffe78f; /* Более яркий желтый для выделенной ячейки */
+            --highlight-bg-color: #f5f1e8; /* Более светлый фон для зоны */
             --button-bg-color: #ffffff;
             --button-border-color: #d3c8b4;
             --button-hover-bg-color: #f0eada;
@@ -166,12 +166,14 @@
             border-bottom: 2px solid var(--grid-line-thick-color);
         }
         
-        .cell.selected {
-            background-color: var(--selected-bg-color);
-        }
-        
+        /* Сначала правило для зоны */
         .cell.highlight {
             background-color: var(--highlight-bg-color);
+        }
+        
+        /* Потом правило для ячейки, чтобы оно было главнее */
+        .cell.selected {
+            background-color: var(--selected-bg-color);
         }
 
         .cell.fixed {
@@ -396,7 +398,7 @@
         function useHint() { let emptyCells = []; for (let r = 0; r < 9; r++) { for (let c = 0; c < 9; c++) { if (board[r][c] === 0) emptyCells.push({ r, c }); } } if (emptyCells.length > 0) { const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)]; const { r, c } = randomCell; const correctValue = solution[r][c]; board[r][c] = correctValue; const cellElement = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`); cellElement.textContent = correctValue; cellElement.classList.add('user-filled'); cellElement.classList.remove('error'); checkWinCondition(); } }
         function renderBoard() { boardElement.innerHTML = ''; for (let r = 0; r < 9; r++) { for (let c = 0; c < 9; c++) { const cell = document.createElement('div'); cell.classList.add('cell'); cell.dataset.row = r; cell.dataset.col = c; if (board[r][c] !== 0) { cell.textContent = board[r][c]; if (initialBoard[r][c] !== 0) { cell.classList.add('fixed'); } else { cell.classList.add('user-filled'); } } if (initialBoard[r][c] === 0) { cell.addEventListener('click', () => selectCell(cell, r, c)); } boardElement.appendChild(cell); } } }
         function setupNumberControls() { numberControls.innerHTML = ''; for (let i = 1; i <= 9; i++) { const btn = document.createElement('button'); btn.classList.add('number-btn'); btn.textContent = i; btn.addEventListener('click', () => fillNumber(i)); numberControls.appendChild(btn); } const eraseBtn = document.createElement('button'); eraseBtn.classList.add('number-btn'); eraseBtn.innerHTML = '&#9003;'; eraseBtn.addEventListener('click', () => fillNumber(0)); numberControls.appendChild(eraseBtn); }
-        function selectCell(cell, r, c) { if (selectedCell) { selectedCell.element.classList.remove('selected'); } document.querySelectorAll('.cell.highlight').forEach(c => c.classList.remove('highlight')); selectedCell = { element: cell, r, c }; cell.classList.add('selected'); for (let i = 0; i < 9; i++) { document.querySelector(`.cell[data-row='${r}'][data-col='${i}']`).classList.add('highlight'); document.querySelector(`.cell[data-row='${i}'][data-col='${c}']`).classList.add('highlight'); } const startRow = r - r % 3; const startCol = c - c % 3; for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) { document.querySelector(`.cell[data-row='${startRow+i}'][data-col='${startCol+j}']`).classList.add('highlight'); } } cell.classList.add('selected'); }
+        function selectCell(cell, r, c) { if (selectedCell) { selectedCell.element.classList.remove('selected'); } document.querySelectorAll('.cell.highlight').forEach(c => c.classList.remove('highlight')); selectedCell = { element: cell, r, c }; for (let i = 0; i < 9; i++) { document.querySelector(`.cell[data-row='${r}'][data-col='${i}']`).classList.add('highlight'); document.querySelector(`.cell[data-row='${i}'][data-col='${c}']`).classList.add('highlight'); } const startRow = r - r % 3; const startCol = c - c % 3; for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) { document.querySelector(`.cell[data-row='${startRow+i}'][data-col='${startCol+j}']`).classList.add('highlight'); } } cell.classList.add('selected'); }
         function fillNumber(num) { if (!selectedCell) return; const { element, r, c } = selectedCell; if (initialBoard[r][c] !== 0) return; element.classList.remove('error'); if (num === 0) { element.textContent = ''; board[r][c] = 0; } else { element.textContent = num; board[r][c] = num; element.classList.add('user-filled'); if (num !== solution[r][c]) { element.classList.add('error'); } } if (num !== 0 && !element.classList.contains('error')) { checkWinCondition(); } }
         function checkWinCondition() { for (let r = 0; r < 9; r++) { for (let c = 0; c < 9; c++) { if (board[r][c] === 0 || board[r][c] !== solution[r][c]) return; } } winModal.style.display = 'flex'; }
         
