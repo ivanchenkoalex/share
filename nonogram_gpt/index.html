@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#2e315f" />
-  <title>Японский кроссворд — Canvas PWA (v3.8 pointer-only, init size fix)</title>
+  <title>Японский кроссворд — Canvas PWA (v3.8.2 pointer-only, RO throttle)</title>
   <!-- Single-file; comments in English only. -->
   <style>
     :root{
@@ -334,7 +334,6 @@
   function computeLayout(){
     if(!isReady()) return;
     const wrap = qs('#boardWrap');
-    // robust width/height when the screen was hidden a moment ago
     const wrapW = Math.max(wrap?.getBoundingClientRect().width || 0, document.documentElement.clientWidth - 24, 360);
     const maxW = Math.min(wrapW-8, 980);
     const maxH = Math.max(window.innerHeight - 320, 360);
@@ -350,11 +349,22 @@
     const dpr = Math.max(1, window.devicePixelRatio||1);
     const cssW = app.leftMargin + n*cell + 16;
     const cssH = app.topMargin  + n*cell + 16;
-    canvas.style.width  = cssW + 'px';
-    canvas.style.height = cssH + 'px';
-    canvas.width  = Math.floor(cssW * dpr);
-    canvas.height = Math.floor(cssH * dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    // Only mutate DOM if values actually change to avoid RO feedback loops
+    const needCssW = canvas.style.width !== cssW + 'px';
+    const needCssH = canvas.style.height !== cssH + 'px';
+    const pxW = Math.floor(cssW * dpr);
+    const pxH = Math.floor(cssH * dpr);
+    const needBuf = canvas.width !== pxW || canvas.height !== pxH || canvas.dataset.dpr != String(dpr);
+
+    if(needCssW) canvas.style.width  = cssW + 'px';
+    if(needCssH) canvas.style.height = cssH + 'px';
+    if(needBuf){
+      canvas.width  = pxW;
+      canvas.height = pxH;
+      canvas.dataset.dpr = String(dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
   }
 
   function rr(x,y,w,h,r){
@@ -365,7 +375,7 @@
   function rowRunSatisfied(r, idx){ const run=app.rowRuns[r][idx]; if(!run) return false; for(let c=run.start;c<run.start+run.len;c++){ if(app.state[r][c]!==1) return false; } return true; }
   function colRunSatisfied(c, idx){ const run=app.colRuns[c][idx]; if(!run) return false; for(let r=run.start;r<run.start+run.len;r++){ if(app.state[r][c]!==1) return false; } return true; }
   function rowAllRequiredFilled(r){ const n=app.size; for(let c=0;c<n;c++){ if(app.solution[r][c] && app.state[r][c]!==1) return false; } return true; }
-  function colAllRequiredFilled(c){ const n=app.size; for(let r=0;r<n;r++){ if(app.solution[r][r] && app.state[r][c]!==1) return false; } return true; }
+  function colAllRequiredFilled(c){ const n=app.size; for(let r=0;r<n;r++){ if(app.solution[r][c] && app.state[r][c]!==1) return false; } return true; }
 
   function draw(){
     if(!isReady()) return;
@@ -471,7 +481,7 @@
     app.moves=0; app.errors=0; app.hints=0; app.dragging=false; app.dragSetTo=0; app.lastDragKey=''; app.solved=false; app.effects=[];
     app.startTs = performance.now();
     app.timerId = setInterval(updateStatsTime, 1000);
-    computeLayout(); draw(); updateStats(); setMode('fill');
+    scheduleLayout(); updateStats(); setMode('fill');
   }
 
   function restartPuzzle(){ hideWinModal(); app.state=make2D(app.size,app.size,0); app.moves=0; app.errors=0; app.hints=0; app.dragging=false; app.dragSetTo=0; app.lastDragKey=''; app.solved=false; app.effects=[]; app.startTs=performance.now(); updateStats(); draw(); }
@@ -541,14 +551,21 @@
   canvas.addEventListener('pointerup', (e)=>{ if(!app.dragging) return; app.dragging=false; app.lastDragKey=''; try{canvas.releasePointerCapture(e.pointerId);}catch(_){} });
   document.addEventListener('contextmenu', (e)=>{ if(e.target===canvas) e.preventDefault(); });
 
-  // Recompute when boardWrap becomes visible/changes size (fix tiny on first open)
+  // ---------- Layout scheduling to avoid ResizeObserver loops ----------
+  let layoutRAF = 0;
+  function scheduleLayout(){
+    if(layoutRAF) return; // throttle to one per frame
+    layoutRAF = requestAnimationFrame(()=>{ layoutRAF = 0; computeLayout(); draw(); });
+  }
+
+  // Recompute when boardWrap becomes visible/changes size
   const boardWrap = qs('#boardWrap');
   if('ResizeObserver' in window){
-    const ro = new ResizeObserver(()=>{ if(isReady()){ computeLayout(); draw(); }});
+    const ro = new ResizeObserver(()=>{ if(isReady()) scheduleLayout(); });
     ro.observe(boardWrap);
   }
 
-  window.addEventListener('resize', ()=>{ if(!isReady()) return; computeLayout(); draw(); });
+  window.addEventListener('resize', ()=>{ if(!isReady()) return; scheduleLayout(); });
 
   // ---------- UI ----------
   function showStart(){ screenStart.classList.remove('hidden'); screenGame.classList.add('hidden'); }
@@ -580,9 +597,38 @@
 
   function iconDataURL(size){ const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d'); x.fillStyle='#eaf2f6'; x.fillRect(0,0,size,size); x.strokeStyle='#2e315f'; x.lineWidth=Math.max(2,size/96); x.strokeRect(size*0.06,size*0.06,size*0.88,size*0.88); x.strokeStyle='#9aa3b2'; x.lineWidth=Math.max(1,size/192); for(let i=1;i<4;i++){ const p=size*0.12 + i*(size*0.76/4); x.beginPath(); x.moveTo(p,size*0.12); x.lineTo(p,size*0.88); x.stroke(); x.beginPath(); x.moveTo(size*0.12,p); x.lineTo(size*0.88,p); x.stroke(); } x.fillStyle='#2e315f'; const fills=[[0,1],[1,3],[2,0],[2,2],[3,1]]; fills.forEach(([r,c0])=>{const g=size*0.76/4; const x0=size*0.12+c0*g+3; const y0=size*0.12+r*g+3; x.fillRect(x0,y0,g-6,g-6);}); return c.toDataURL('image/png'); }
 
-  async function setupPWA(){ if(!('serviceWorker' in navigator)) return; const manifest={ name:'Японский кроссворд', short_name:'Nonogram', start_url:'.', display:'standalone', background_color:'#eaf2f6', theme_color:'#2e315f', icons:[{src:iconDataURL(192),sizes:'192x192',type:'image/png'},{src:iconDataURL(512),sizes:'512x512',type:'image/png'}]}; const manBlob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}); const manUrl=URL.createObjectURL(manBlob); const link=document.createElement('link'); link.rel='manifest'; link.href=manUrl; document.head.appendChild(link); const swCode=`const CACHE='nonogram-onefile-v3-8';self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);try{await c.addAll(['./']);}catch(_){}})()); self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil((async()=>{const ks=await caches.keys(); await Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)));})()); self.clients.claim();});self.addEventListener('fetch',e=>{const req=e.request; e.respondWith((async()=>{const hit=await caches.match(req); if(hit) return hit; try{const res=await fetch(req); return res;}catch(err){const root=await caches.match('./'); return root||Response.error();}})());});`; const swUrl=URL.createObjectURL(new Blob([swCode],{type:'text/javascript'})); try{ await navigator.serviceWorker.register(swUrl,{scope:'./'});}catch(_){} }
+  async function setupPWA(){ if(!('serviceWorker' in navigator)) return; const manifest={ name:'Японский кроссворд', short_name:'Nonogram', start_url:'.', display:'standalone', background_color:'#eaf2f6', theme_color:'#2e315f', icons:[{src:iconDataURL(192),sizes:'192x192',type:'image/png'},{src:iconDataURL(512),sizes:'512x512',type:'image/png'}]}; const manBlob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}); const manUrl=URL.createObjectURL(manBlob); const link=document.createElement('link'); link.rel='manifest'; link.href=manUrl; document.head.appendChild(link); const swCode=`const CACHE='nonogram-onefile-v3-8-2';self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);try{await c.addAll(['./']);}catch(_){}})()); self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil((async()=>{const ks=await caches.keys(); await Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)));})()); self.clients.claim();});self.addEventListener('fetch',e=>{const req=e.request; e.respondWith((async()=>{const hit=await caches.match(req); if(hit) return hit; try{const res=await fetch(req); return res;}catch(err){const root=await caches.match('./'); return root||Response.error();}})());});`; const swUrl=URL.createObjectURL(new Blob([swCode],{type:'text/javascript'})); try{ await navigator.serviceWorker.register(swUrl,{scope:'./'});}catch(_){} }
 
-  function init(){ showStart(); setupPWA(); }
+  // ---------- Dev tests (run with ?test=1 or #test) ----------
+  function runTests(){
+    const log=(name,ok)=>console[ok?'log':'error'](`[TEST] ${ok?'PASS':'FAIL'}: ${name}`);
+    try{
+      let threw=false; try{ computeLayout(); draw(); }catch(e){ threw=true; console.error(e); }
+      log('safe draw/compute before newPuzzle()', !threw);
+
+      newPuzzle(15);
+      const rowsOK = app.rowClues.every(a=>a.length>=1 && a.length<=4);
+      const colsOK = app.colClues.every(a=>a.length>=1 && a.length<=4);
+      log('runs 1..4 rows', rowsOK);
+      log('runs 1..4 cols', colsOK);
+
+      // Wrong fill increments counters
+      let found=null; outer: for(let r=0;r<app.size;r++) for(let c=0;c<app.size;c++){ if(!app.solution[r][c]){ found={r,c}; break outer; } }
+      const m0=app.moves, e0=app.errors; setCell(found.r,found.c,1,true);
+      log('wrong fill increments', app.errors===e0+1 && app.moves===m0+1);
+
+      // Auto-X vertical test
+      const N=5; app.size=N; app.solution=make2D(N,N,false); app.state=make2D(N,N,0);
+      app.solution[1][2]=true; app.solution[3][2]=true; // column 2 requires two cells
+      const clues=calcClues(app.solution); app.rowClues=clues.rowClues; app.colClues=clues.colClues; const runs=calcRuns(app.solution); app.rowRuns=runs.rowRuns; app.colRuns=runs.colRuns;
+      app.autoX=true; computeLayout();
+      setCell(1,2,1,false); setCell(3,2,1,false);
+      const okCol = [0,2,4].every(r=>app.state[r][2]===-1);
+      log('Auto-X marks remaining in solved column', okCol);
+    }catch(e){ console.error('[TEST] Fatal', e); }
+  }
+
+  function init(){ showStart(); setupPWA(); if(location.search.includes('test=1')||location.hash.includes('test')) runTests(); }
   init();
   </script>
 </body>
