@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#2e315f" />
-  <title>Японский кроссворд — Canvas PWA (v3.8.2 pointer-only, RO throttle)</title>
+  <title>Японский кроссворд — Canvas PWA (v3.10)</title>
   <!-- Single-file; comments in English only. -->
   <style>
     :root{
@@ -69,7 +69,8 @@
     /* Stats pill under toolbar */
     .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:var(--maxw);width:100%}
     .stat{background:var(--pill-bg);border:1px solid var(--pill-border);border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
-    .stat .label{color:#5b6678;font-weight:600}
+    .stat .label{color:#5b6678;font-weight:600;display:flex;align-items:center;gap:6px}
+    .stat .label svg{width:20px;height:20px;display:block}
     .stat .val{font-weight:800}
 
     #boardWrap{max-width:var(--maxw);width:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:12px;gap:12px}
@@ -132,10 +133,18 @@
       </div>
 
       <div class="stats" id="stats">
-        <div class="stat"><span class="label">Ходы</span><span class="val" id="stat-moves">0</span></div>
-        <div class="stat"><span class="label">Ошибки</span><span class="val" id="stat-errors">0</span></div>
-        <div class="stat"><span class="label">Подсказки</span><span class="val" id="stat-hints">0</span></div>
-        <div class="stat"><span class="label">Время</span><span class="val" id="stat-time">00:00</span></div>
+        <div class="stat" aria-label="Ходы"><span class="label" title="Ходы">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M168-121q-21 5-36.5-10.5T121-168l35-170 182 182-170 35Zm235-84L205-403l413-413q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L403-205Z"/></svg>
+        </span><span class="val" id="stat-moves">0</span></div>
+        <div class="stat" aria-label="Ошибки"><span class="label" title="Ошибки">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm0-160q17 0 28.5-11.5T520-480v-160q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v160q0 17 11.5 28.5T480-440Zm0 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+        </span><span class="val" id="stat-errors">0</span></div>
+        <div class="stat" aria-label="Подсказки"><span class="label" title="Подсказки">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M400-240q-33 0-56.5-23.5T320-320v-50q-57-39-88.5-100T200-600q0-117 81.5-198.5T480-880q117 0 198.5 81.5T760-600q0 69-31.5 129.5T640-370v50q0 33-23.5 56.5T560-240H400Zm0-80h160v-71q0-10 4.5-19t12.5-14l17-12q41-28 63.5-71.5T680-600q0-83-58.5-141.5T480-800q-83 0-141.5 58.5T280-600q0 49 22.5 92.5T366-436l17 12q8 5 12.5 14t4.5 19v71Zm0 240q-17 0-28.5-11.5T360-120q0-17 11.5-28.5T400-160h160q17 0 28.5 11.5T600-120q0 17-11.5 28.5T560-80H400Zm80-520Z"/></svg>
+        </span><span class="val" id="stat-hints">0</span></div>
+        <div class="stat" aria-label="Время"><span class="label" title="Время">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M400-840q-17 0-28.5-11.5T360-880q0-17 11.5-28.5T400-920h160q17 0 28.5 11.5T600-880q0 17-11.5 28.5T560-840H400Zm80 440q17 0 28.5-11.5T520-440v-160q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600v160q0 17 11.5 28.5T480-400Zm0 320q-74 0-139.5-28.5T226-186q-49-49-77.5-114.5T120-440q0-74 28.5-139.5T226-694q49-49 114.5-77.5T480-800q62 0 119 20t107 58l28-28q11-11 28-11t28 11q11 11 11 28t-11 28l-28 28q38 50 58 107t20 119q0 74-28.5 139.5T734-186q-49 49-114.5 77.5T480-80Zm0-80q116 0 198-82t82-198q0-116-82-198t-198-82q-116 0-198 82t-82 198q0 116 82 198t198 82Zm0-280Z"/></svg>
+        </span><span class="val" id="stat-time">00:00</span></div>
       </div>
 
       <div id="boardWrap">
@@ -161,10 +170,18 @@
       <h2>Поздравляем!</h2>
       <div class="muted">Уровень пройден</div>
       <div class="stats">
-        <div class="stat"><span class="label">Ходы</span><span class="val" id="win-moves">0</span></div>
-        <div class="stat"><span class="label">Ошибки</span><span class="val" id="win-errors">0</span></div>
-        <div class="stat"><span class="label">Подсказки</span><span class="val" id="win-hints">0</span></div>
-        <div class="stat"><span class="label">Время</span><span class="val" id="win-time">00:00</span></div>
+        <div class="stat" aria-label="Ходы"><span class="label" title="Ходы">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M168-121q-21 5-36.5-10.5T121-168l35-170 182 182-170 35Zm235-84L205-403l413-413q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L403-205Z"/></svg>
+        </span><span class="val" id="win-moves">0</span></div>
+        <div class="stat" aria-label="Ошибки"><span class="label" title="Ошибки">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm0-160q17 0 28.5-11.5T520-480v-160q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v160q0 17 11.5 28.5T480-440Zm0 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+        </span><span class="val" id="win-errors">0</span></div>
+        <div class="stat" aria-label="Подсказки"><span class="label" title="Подсказки">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M400-240q-33 0-56.5-23.5T320-320v-50q-57-39-88.5-100T200-600q0-117 81.5-198.5T480-880q117 0 198.5 81.5T760-600q0 69-31.5 129.5T640-370в50q0 33-23.5 56.5T560-240H400Zm0-80h160v-71q0-10 4.5-19t12.5-14л17-12q41-28 63.5-71.5T680-600q0-83-58.5-141.5T480-800q-83 0-141.5 58.5T280-600q0 49 22.5 92.5T366-436л17 12q8 5 12.5 14t4.5 19в71Zm0 240q-17 0-28.5-11.5T360-120q0-17 11.5-28.5T400-160h160q17 0 28.5 11.5T600-120q0 17-11.5 28.5T560-80H400Zm80-520Z"/></svg>
+        </span><span class="val" id="win-hints">0</span></div>
+        <div class="stat" aria-label="Время"><span class="label" title="Время">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#5f6368" viewBox="0 -960 960 960"><path d="M400-840q-17 0-28.5-11.5T360-880q0-17 11.5-28.5T400-920h160q17 0 28.5 11.5T600-880q0 17-11.5 28.5T560-840H400Zm80 440q17 0 28.5-11.5T520-440v-160q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600v160q0 17 11.5 28.5T480-400Zm0 320q-74 0-139.5-28.5T226-186q-49-49-77.5-114.5T120-440q0-74 28.5-139.5T226-694q49-49 114.5-77.5T480-800q62 0 119 20t107 58l28-28q11-11 28-11t28 11q11 11 11 28t-11 28l-28 28q38 50 58 107t20 119q0 74-28.5 139.5T734-186q-49 49-114.5 77.5T480-80Zm0-80q116 0 198-82t82-198q0-116-82-198t-198-82q-116 0-198 82t-82 198q0 116 82 198t198 82Zm0-280Z"/></svg>
+        </span><span class="val" id="win-time">00:00</span></div>
       </div>
       <div class="actions">
         <button id="win-close" class="btn">Закрыть</button>
@@ -214,6 +231,9 @@
     effects: [],           // [{type:'wrong', r,c, t0, dur}]
   };
 
+  // Modal click-through guard
+  let modalGuardUntil = 0; // timestamp in ms
+
   // DOM
   const screenStart = qs('#screen-start');
   const screenGame  = qs('#screen-game');
@@ -236,6 +256,39 @@
   // ---------- Puzzle ----------
   const make2D = (n,m,v=0)=>Array.from({length:n},()=>Array.from({length:m},()=>v));
   const rnd = (p)=>Math.random()<p;
+
+  function runs1D(arr){ const out=[]; let len=0, start=0; for(let i=0;i<arr.length;i++){ if(arr[i]){ if(len===0) start=i; len++; } else if(len){ out.push({start,len}); len=0; } } if(len) out.push({start,len}); return out; }
+
+  function enforceLine(arr, maxRuns){
+    const n=arr.length; let a=arr.slice();
+    let runs=runs1D(a);
+    if(runs.length===0){
+      const L = randInt(1, n);
+      const st = randInt(0, n-L);
+      for(let i=st;i<st+L;i++) a[i]=true;
+      runs=runs1D(a);
+    }
+    while(runs.length>maxRuns){
+      const gaps=[]; for(let i=0;i<runs.length-1;i++){ const left=runs[i]; const right=runs[i+1]; const st=left.start+left.len; const L=right.start - st; gaps.push({st,L,idx:i}); }
+      gaps.sort((g1,g2)=>g1.L-g2.L);
+      const g0=gaps[0]; for(let i=g0.st;i<g0.st+g0.L;i++) a[i]=true;
+      runs=runs1D(a);
+    }
+    return a;
+  }
+
+  function transpose(g){ const n=g.length; const t=make2D(n,n,false); for(let r=0;r<n;r++) for(let c=0;c<n;c++) t[c][r]=g[r][c]; return t; }
+
+  function enforceRunsPerLine(g, maxRuns){
+    const n=g.length; let grid=g.map(row=>row.slice());
+    for(let iter=0; iter<3; iter++){
+      for(let r=0;r<n;r++) grid[r]=enforceLine(grid[r], maxRuns);
+      grid = transpose(grid);
+      for(let r=0;r<n;r++) grid[r]=enforceLine(grid[r], maxRuns);
+      grid = transpose(grid);
+    }
+    return grid;
+  }
 
   function generateSolution(n){
     let g = make2D(n,n,false);
@@ -270,39 +323,6 @@
     g = enforceRunsPerLine(g, 4);
     if(g.flat().every(v=>!v)) g[Math.floor(n/2)][Math.floor(n/2)] = true;
     return g;
-  }
-
-  function runs1D(arr){ const out=[]; let len=0, start=0; for(let i=0;i<arr.length;i++){ if(arr[i]){ if(len===0) start=i; len++; } else if(len){ out.push({start,len}); len=0; } } if(len) out.push({start,len}); return out; }
-
-  function enforceLine(arr, maxRuns){
-    const n=arr.length; let a=arr.slice();
-    let runs=runs1D(a);
-    if(runs.length===0){
-      const L = randInt(1, n);
-      const st = randInt(0, n-L);
-      for(let i=st;i<st+L;i++) a[i]=true;
-      runs=runs1D(a);
-    }
-    while(runs.length>maxRuns){
-      const gaps=[]; for(let i=0;i<runs.length-1;i++){ const left=runs[i]; const right=runs[i+1]; const st=left.start+left.len; const L=right.start - st; gaps.push({st,L,idx:i}); }
-      gaps.sort((g1,g2)=>g1.L-g2.L);
-      const g0=gaps[0]; for(let i=g0.st;i<g0.st+g0.L;i++) a[i]=true;
-      runs=runs1D(a);
-    }
-    return a;
-  }
-
-  function transpose(g){ const n=g.length; const t=make2D(n,n,false); for(let r=0;r<n;r++) for(let c=0;c<n;c++) t[c][r]=g[r][c]; return t; }
-
-  function enforceRunsPerLine(g, maxRuns){
-    const n=g.length; let grid=g.map(row=>row.slice());
-    for(let iter=0; iter<3; iter++){
-      for(let r=0;r<n;r++) grid[r]=enforceLine(grid[r], maxRuns);
-      grid = transpose(grid);
-      for(let r=0;r<n;r++) grid[r]=enforceLine(grid[r], maxRuns);
-      grid = transpose(grid);
-    }
-    return grid;
   }
 
   function calcClues(grid){
@@ -582,13 +602,30 @@
   qs('#btn-restart').addEventListener('click', ()=>{ restartPuzzle(); });
   qs('#btn-hint').addEventListener('click', ()=>{ giveHint(); });
 
-  // ---------- Win modal helpers ----------
-  function showWinModal(){ winMoves.textContent=String(app.moves); winErrors.textContent=String(app.errors); winHints.textContent=String(app.hints); winTime.textContent=statTime.textContent; winOverlay.classList.remove('hidden'); }
+  // ---------- Win modal helpers with guard ----------
+  function showWinModal(){
+    winMoves.textContent=String(app.moves);
+    winErrors.textContent=String(app.errors);
+    winHints.textContent=String(app.hints);
+    winTime.textContent=statTime.textContent;
+    winOverlay.classList.remove('hidden');
+    // Guard: ignore interactions for ~450ms to avoid touch click-through
+    modalGuardUntil = performance.now() + 450;
+    winOverlay.style.pointerEvents = 'none';
+    setTimeout(()=>{ winOverlay.style.pointerEvents = ''; }, 460);
+  }
   function hideWinModal(){ winOverlay.classList.add('hidden'); }
-  qs('#win-close').addEventListener('click', hideWinModal);
-  qs('#win-new').addEventListener('click', ()=>{ hideWinModal(); newPuzzle(app.size); });
-  qs('#win-home').addEventListener('click', ()=>{ hideWinModal(); showStart(); });
-  winOverlay.addEventListener('click', (e)=>{ if(e.target===winOverlay) hideWinModal(); });
+
+  // Guard helpers
+  const guardActive = () => performance.now() < modalGuardUntil;
+  // Swallow pointerdown during guard
+  winOverlay.addEventListener('pointerdown', (e)=>{ if(guardActive()){ e.preventDefault(); e.stopPropagation(); } }, true);
+  // Swallow clicks during guard
+  winOverlay.addEventListener('click', (e)=>{ if(guardActive()){ e.preventDefault(); e.stopPropagation(); return; } if(e.target===winOverlay) hideWinModal(); });
+
+  qs('#win-close').addEventListener('click', (e)=>{ if(guardActive()){ e.preventDefault(); return; } hideWinModal(); });
+  qs('#win-new').addEventListener('click',   (e)=>{ if(guardActive()){ e.preventDefault(); return; } hideWinModal(); newPuzzle(app.size); });
+  qs('#win-home').addEventListener('click',  (e)=>{ if(guardActive()){ e.preventDefault(); return; } hideWinModal(); showStart(); });
 
   // ---------- PWA bootstrap ----------
   let deferredPrompt=null;
@@ -597,7 +634,7 @@
 
   function iconDataURL(size){ const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d'); x.fillStyle='#eaf2f6'; x.fillRect(0,0,size,size); x.strokeStyle='#2e315f'; x.lineWidth=Math.max(2,size/96); x.strokeRect(size*0.06,size*0.06,size*0.88,size*0.88); x.strokeStyle='#9aa3b2'; x.lineWidth=Math.max(1,size/192); for(let i=1;i<4;i++){ const p=size*0.12 + i*(size*0.76/4); x.beginPath(); x.moveTo(p,size*0.12); x.lineTo(p,size*0.88); x.stroke(); x.beginPath(); x.moveTo(size*0.12,p); x.lineTo(size*0.88,p); x.stroke(); } x.fillStyle='#2e315f'; const fills=[[0,1],[1,3],[2,0],[2,2],[3,1]]; fills.forEach(([r,c0])=>{const g=size*0.76/4; const x0=size*0.12+c0*g+3; const y0=size*0.12+r*g+3; x.fillRect(x0,y0,g-6,g-6);}); return c.toDataURL('image/png'); }
 
-  async function setupPWA(){ if(!('serviceWorker' in navigator)) return; const manifest={ name:'Японский кроссворд', short_name:'Nonogram', start_url:'.', display:'standalone', background_color:'#eaf2f6', theme_color:'#2e315f', icons:[{src:iconDataURL(192),sizes:'192x192',type:'image/png'},{src:iconDataURL(512),sizes:'512x512',type:'image/png'}]}; const manBlob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}); const manUrl=URL.createObjectURL(manBlob); const link=document.createElement('link'); link.rel='manifest'; link.href=manUrl; document.head.appendChild(link); const swCode=`const CACHE='nonogram-onefile-v3-8-2';self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);try{await c.addAll(['./']);}catch(_){}})()); self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil((async()=>{const ks=await caches.keys(); await Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)));})()); self.clients.claim();});self.addEventListener('fetch',e=>{const req=e.request; e.respondWith((async()=>{const hit=await caches.match(req); if(hit) return hit; try{const res=await fetch(req); return res;}catch(err){const root=await caches.match('./'); return root||Response.error();}})());});`; const swUrl=URL.createObjectURL(new Blob([swCode],{type:'text/javascript'})); try{ await navigator.serviceWorker.register(swUrl,{scope:'./'});}catch(_){} }
+  async function setupPWA(){ if(!('serviceWorker' in navigator)) return; const manifest={ name:'Японский кроссворд', short_name:'Nonogram', start_url:'.', display:'standalone', background_color:'#eaf2f6', theme_color:'#2e315f', icons:[{src:iconDataURL(192),sizes:'192x192',type:'image/png'},{src:iconDataURL(512),sizes:'512x512',type:'image/png'}]}; const manBlob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}); const manUrl=URL.createObjectURL(manBlob); const link=document.createElement('link'); link.rel='manifest'; link.href=manUrl; document.head.appendChild(link); const swCode=`const CACHE='nonogram-onefile-v3-10';self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);try{await c.addAll(['./']);}catch(_){}})()); self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil((async()=>{const ks=await caches.keys(); await Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)));})()); self.clients.claim();});self.addEventListener('fetch',e=>{const req=e.request; e.respondWith((async()=>{const hit=await caches.match(req); if(hit) return hit; try{const res=await fetch(req); return res;}catch(err){const root=await caches.match('./'); return root||Response.error();}})());});`; const swUrl=URL.createObjectURL(new Blob([swCode],{type:'text/javascript'})); try{ await navigator.serviceWorker.register(swUrl,{scope:'./'});}catch(_){} }
 
   // ---------- Dev tests (run with ?test=1 or #test) ----------
   function runTests(){
@@ -620,7 +657,7 @@
       // Auto-X vertical test
       const N=5; app.size=N; app.solution=make2D(N,N,false); app.state=make2D(N,N,0);
       app.solution[1][2]=true; app.solution[3][2]=true; // column 2 requires two cells
-      const clues=calcClues(app.solution); app.rowClues=clues.rowClues; app.colClues=clues.colClues; const runs=calcRuns(app.solution); app.rowRuns=runs.rowRuns; app.colRuns=runs.colRuns;
+      let clues=calcClues(app.solution); app.rowClues=clues.rowClues; app.colClues=clues.colClues; let runs=calcRuns(app.solution); app.rowRuns=runs.rowRuns; app.colRuns=runs.colRuns;
       app.autoX=true; computeLayout();
       setCell(1,2,1,false); setCell(3,2,1,false);
       const okCol = [0,2,4].every(r=>app.state[r][2]===-1);
